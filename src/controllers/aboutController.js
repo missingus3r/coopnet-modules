@@ -5,15 +5,16 @@ exports.getAbout = async (req, res) => {
     const version = process.env.SITE_VERSION || '1.0.0';
     
     const developers = [
+      { name: 'Alexis', linkedin: '', github: '' },
       { name: 'Bruno', linkedin: '', github: '' },
       { name: 'Nahuel', linkedin: '', github: '' },
       { name: 'Enzo', linkedin: '', github: '' },
-      { name: 'Alejandro', linkedin: '', github: '' },
-      { name: 'Alexis', linkedin: '', github: '' }
+      { name: 'Alejandro', linkedin: '', github: '' }
     ];
 
     const config = {
-      developers: developers
+      developers: developers,
+      contactEmail: process.env.CONTACT_EMAIL || 'info.micope@protonmail.com'
     };
     
     // Render the about page
