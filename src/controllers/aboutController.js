@@ -4,12 +4,16 @@ exports.getAbout = async (req, res) => {
     // Extract version from environment or use default
     const version = process.env.SITE_VERSION || '1.0.0';
     
-    // Configuration from environment variables
+    const developers = [
+      { name: 'Bruno', linkedin: '', github: '' },
+      { name: 'Nahuel', linkedin: '', github: '' },
+      { name: 'Enzo', linkedin: '', github: '' },
+      { name: 'Alejandro', linkedin: '', github: '' },
+      { name: 'Alexis', linkedin: '', github: '' }
+    ];
+
     const config = {
-      personName: process.env.ABOUT_PERSON_NAME || 'Bruno Silveira',
-      personLinkedin: process.env.ABOUT_PERSON_LINKEDIN || '',
-      personGithub: process.env.ABOUT_PERSON_GITHUB || '',
-      doktaLinkedin: process.env.ABOUT_DOKTA_LINKEDIN || '',
+      developers: developers
     };
     
     // Render the about page

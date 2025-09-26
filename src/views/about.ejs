@@ -62,45 +62,31 @@
 
             <!-- Team Section -->
             <div class="about-section">
-                <h2>Desarrollador</h2>
+                <h2>Desarrolladores</h2>
                 <div class="team-grid">
+                    <% config.developers.forEach(dev => { %>
                     <div class="team-card">
                         <div class="team-avatar">
                             <i class="material-icons">person</i>
                         </div>
-                        <h3><%= config.personName %></h3>
+                        <h3><%= dev.name %></h3>
                         <p class="team-role">Desarrollador Full Stack</p>
                         <div class="team-links">
-                            <% if (config.personLinkedin) { %>
-                            <a href="<%= config.personLinkedin %>" target="_blank" rel="noopener noreferrer" class="team-link">
+                            <% if (dev.linkedin) { %>
+                            <a href="<%= dev.linkedin %>" target="_blank" rel="noopener noreferrer" class="team-link">
                                 <i class="material-icons">business</i>
                                 LinkedIn
                             </a>
                             <% } %>
-                            <% if (config.personGithub) { %>
-                            <a href="<%= config.personGithub %>" target="_blank" rel="noopener noreferrer" class="team-link">
+                            <% if (dev.github) { %>
+                            <a href="<%= dev.github %>" target="_blank" rel="noopener noreferrer" class="team-link">
                                 <i class="material-icons">code</i>
                                 GitHub
                             </a>
                             <% } %>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Company Section -->
-            <div class="about-section">
-                <h2><a href="https://dokta.cc" target="_blank">DOKTA</a></h2>
-                <p class="section-description">
-                    MiCope.org es desarrollado por <a href="https://dokta.cc" target="_blank">DOKTA</a>, Distributed Open Knowledge & Technological Advancements.
-                </p>
-                <div class="company-links">
-                    <% if (config.doktaLinkedin) { %>
-                    <a href="<%= config.doktaLinkedin %>" target="_blank" rel="noopener noreferrer" class="company-link">
-                        <i class="material-icons">business</i>
-                        LinkedIn DOKTA
-                    </a>
-                    <% } %>
+                    <% }); %>
                 </div>
             </div>
 
