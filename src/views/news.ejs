@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novedades - <%= cooperativaName %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="csrf-token" content="">
+</head>
+<body class="modular-view <%= darkMode ? 'dark-mode' : '' %>">
+    <div class="modular-header">
+        <h1><i class="material-icons">article</i> Novedades - <%= cooperativaName %></h1>
+        <% if (isAdmin) { %>
+            <a href="/news/admin?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-primary">
+                <i class="material-icons">settings</i> Gestionar Novedades
+            </a>
+        <% } %>
+    </div>
+
+    <div class="news-container">
+        <% if (news && news.length > 0) { %>
+            <div class="news-grid">
+                <% news.forEach(function(article) { %>
+                    <article class="news-card">
+                        <div class="news-card-header">
+                            <h2><%= article.title %></h2>
+                            <% if (article.priority !== 'normal') { %>
+                                <span class="priority priority-<%= article.priority %>">
+                                    <%= article.priority === 'urgent' ? 'Urgente' :
+                                        article.priority === 'high' ? 'Alta' : 'Baja' %>
+                                </span>
+                            <% } %>
+                        </div>
+
+                        <div class="news-meta">
+                            <span class="author">
+                                <i class="material-icons">person</i>
+                                <% if (article.author && article.author.firstName && article.author.lastName) { %>
+                                    <%= article.author.firstName %> <%= article.author.lastName %>
+                                <% } else if (article.createdBy === 'superadmin') { %>
+                                    MiCope.org Admin
+                                <% } else { %>
+                                    Autor no disponible
+                                <% } %>
+                            </span>
+                            <span class="date">
+                                <i class="material-icons">schedule</i>
+                                <%= new Date(article.publishedAt || article.createdAt).toLocaleDateString('es-ES', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                }) %>
+                            </span>
+                        </div>
+
+                        <div class="news-excerpt">
+                            <%= article.autoExcerpt %>
+                        </div>
+
+                        <div class="news-footer">
+                            <div class="news-stats">
+                                <span class="stat">
+                                    <i class="material-icons">visibility</i>
+                                    <%= article.views || 0 %>
+                                </span>
+                                <span class="stat">
+                                    <i class="material-icons">favorite</i>
+                                    <%= article.likeCount %>
+                                </span>
+                            </div>
+                            <a href="/news/<%= article._id %>?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-read-more">
+                                Leer más <i class="material-icons">arrow_forward</i>
+                            </a>
+                        </div>
+
+                        <% if (article.tags && article.tags.length > 0) { %>
+                            <div class="news-tags">
+                                <% article.tags.forEach(function(tag) { %>
+                                    <span class="tag">#<%= tag %></span>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </article>
+                <% }) %>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <% if (hasPrevPage) { %>
+                        <a href="/news?page=<%= prevPage %>&<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-secondary">
+                            <i class="material-icons">chevron_left</i> Anterior
+                        </a>
+                    <% } %>
+                    
+                    <span class="page-info">
+                        Página <%= currentPage %> de <%= totalPages %>
+                    </span>
+                    
+                    <% if (hasNextPage) { %>
+                        <a href="/news?page=<%= nextPage %>&<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-secondary">
+                            Siguiente <i class="material-icons">chevron_right</i>
+                        </a>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } else { %>
+            <div class="empty-state">
+                <i class="material-icons">article</i>
+                <h3>No hay novedades</h3>
+                <p>Aún no se han publicado novedades en tu cooperativa.</p>
+            </div>
+        <% } %>
+    </div>
+
+    <style>
+        .modular-view {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .modular-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modular-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modular-header h1 .material-icons {
+            font-size: 2rem;
+            color: #667eea;
+        }
+
+        .news-container {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .news-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .news-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .news-card h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #2d3748;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .priority {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .priority-urgent {
+            background: linear-gradient(45deg, #dc2626, #ef4444);
+            color: white;
+        }
+
+        .priority-high {
+            background: linear-gradient(45deg, #ea580c, #f97316);
+            color: white;
+        }
+
+        .priority-low {
+            background: linear-gradient(45deg, #64748b, #94a3b8);
+            color: white;
+        }
+
+        .news-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .news-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .news-meta .material-icons {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        .news-excerpt {
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            flex: 1;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+        }
+
+        .news-stats {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .stat .material-icons {
+            font-size: 1.125rem;
+            color: #9ca3af;
+        }
+
+        .btn-read-more {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-read-more:hover {
+            transform: translateX(2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-read-more .material-icons {
+            font-size: 1rem;
+        }
+
+        .news-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .tag {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state .material-icons {
+            font-size: 5rem;
+            color: #cbd5e0;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2d3748;
+            font-size: 1.5rem;
+        }
+
+        .empty-state p {
+            color: #64748b;
+            margin: 0;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .page-info {
+            color: white;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        /* Dark mode styles */
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        .dark-mode .modular-header {
+            background: rgba(45, 55, 72, 0.95);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .modular-header h1 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .news-card {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .news-card h2 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .news-excerpt {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .news-meta,
+        .dark-mode .stat {
+            color: #a0aec0;
+        }
+
+        .dark-mode .tag {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .dark-mode .empty-state {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .empty-state h3 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .empty-state p {
+            color: #a0aec0;
+        }
+
+        @media (max-width: 768px) {
+            .modular-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .news-container {
+                padding: 1rem;
+            }
+
+            .pagination {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</body>
+</html>

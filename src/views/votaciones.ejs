@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votaciones</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Votaciones</h1>
+            <p class="page-description">Participa en las decisiones importantes de la cooperativa</p>
+            <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+            <button id="create-vote-btn" class="btn btn-primary">Crear Votación</button>
+            <% } %>
+        </div>
+
+        <div class="votaciones-container">
+            <section class="active-votes">
+                <h2>Votaciones Activas</h2>
+                <% if (active && active.length > 0) { %>
+                    <% active.forEach(vote => { %>
+                    <% const counts = (function(){ const c={Sí:0,No:0,'Abstención':0}; (vote.votes||[]).forEach(v=>c[v.option]++); return c; })(); %>
+                    <% const expireTime = new Date(vote.createdAt).getTime() + vote.duration * 60000; %>
+                    <% const currentUserId = (user && (user._id || user.id || '').toString()) || ''; %>
+                    <% const userVoteOption = (function(){
+                        if(!vote.votes) return null;
+                        for(let i=0;i<vote.votes.length;i++){
+                            if((vote.votes[i].user||'').toString() === currentUserId) return vote.votes[i].option;
+                        }
+                        return null;
+                    })(); %>
+
+                    <div class="vote-item" data-id="<%= vote._id %>">
+                        <div class="vote-timer" data-end="<%= expireTime %>">--:--</div>
+                        <h3><%= vote.title %></h3>
+                        <% if (vote.details) { %>
+                            <p><%= vote.details %></p>
+                        <% } %>
+                        <div class="vote-options">
+                            <label><input type="radio" name="vote_<%= vote._id %>" value="Sí" <%= userVoteOption === 'Sí' ? 'checked' : '' %>> Sí</label>
+                            <label><input type="radio" name="vote_<%= vote._id %>" value="No" <%= userVoteOption === 'No' ? 'checked' : '' %>> No</label>
+                            <label><input type="radio" name="vote_<%= vote._id %>" value="Abstención" <%= userVoteOption === 'Abstención' ? 'checked' : '' %>> Abstención</label>
+                        </div>
+                        <% if (participants && participants.length > 1) { %>
+                        <div class="vote-represent">
+                            <label for="represent_<%= vote._id %>">Representar a:</label>
+                            <select name="represent_<%= vote._id %>" id="represent_<%= vote._id %>">
+                                <option value="">-- Ninguno --</option>
+                                <% participants.forEach(p => { %>
+                                    <% if (p._id.toString() !== currentUserId) { %>
+                                        <option value="<%= p._id %>"><%= p.firstName %> <%= p.lastName %></option>
+                                    <% } %>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <% } %>
+                        <button class="btn btn-secondary submit-vote-btn">Votar / Cambiar voto</button>
+                        <div class="vote-counts">
+                            <span class="badge si">Sí: <%= counts['Sí'] %></span>
+                            <span class="badge no">No: <%= counts['No'] %></span>
+                            <span class="badge abst">Abstención: <%= counts['Abstención'] %></span>
+                        </div>
+                    </div>
+                    <% }); %>
+                <% } else { %>
+                    <p>No hay votaciones activas.</p>
+                <% } %>
+            </section>
+
+            <section class="past-votes">
+                <h2>Votaciones Anteriores</h2>
+                <% if (past && past.length > 0) { %>
+                    <% past.forEach(vote => { %>
+                    <% const counts = (function(){ const c={Sí:0,No:0,'Abstención':0}; (vote.votes||[]).forEach(v=>c[v.option]++); return c; })(); %>
+                    <div class="vote-item past">
+                        <h3><%= vote.title %></h3>
+                        <p><%= vote.details %></p>
+                        <div class="vote-results">
+                            <h4>Resultados Finales:</h4>
+                            <div class="result-bars">
+                                <div class="result-bar">
+                                    <span>Sí: <%= counts['Sí'] %></span>
+                                    <div class="bar" style="width: <%= (counts['Sí'] / (vote.votes?.length || 1)) * 100 %>%; background: #4CAF50;"></div>
+                                </div>
+                                <div class="result-bar">
+                                    <span>No: <%= counts['No'] %></span>
+                                    <div class="bar" style="width: <%= (counts['No'] / (vote.votes?.length || 1)) * 100 %>%; background: #f44336;"></div>
+                                </div>
+                                <div class="result-bar">
+                                    <span>Abstención: <%= counts['Abstención'] %></span>
+                                    <div class="bar" style="width: <%= (counts['Abstención'] / (vote.votes?.length || 1)) * 100 %>%; background: #FFC107;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% }); %>
+                <% } else { %>
+                    <p>No hay votaciones anteriores.</p>
+                <% } %>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal para crear votación -->
+    <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+    <div id="createVoteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Crear Votación</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <form id="createVoteForm" action="/votaciones" method="POST">
+                <input type="hidden" name="_method" value="POST">
+                <div class="form-group">
+                    <label for="title">Título</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="details">Detalles (opcional)</label>
+                    <textarea id="details" name="details" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="duration">Duración (minutos)</label>
+                    <input type="number" id="duration" name="duration" min="1" value="60" required>
+                </div>
+                <div class="form-group">
+                    <label for="proposer">Propuesto por</label>
+                    <select id="proposer" name="proposer">
+                        <option value="">-- Seleccionar --</option>
+                        <% if (participants) participants.forEach(p => { %>
+                            <option value="<%= p._id %>"><%= p.firstName %> <%= p.lastName %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Crear</button>
+            </form>
+        </div>
+    </div>
+    <div id="modal-overlay" style="display: none;"></div>
+    <% } %>
+
+    <script src="/js/votaciones.js"></script>
+</body>
+</html>

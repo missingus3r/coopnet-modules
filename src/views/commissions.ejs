@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <section class="admin-commissions-page">
+            <div class="commissions-container">
+                <div class="page-header">
+                    <h1 class="page-title"><%= (user.role === 'cooperativa-admin' || user.role === 'superuser') ? 'Gestión de Comisiones' : 'Comisiones de la Cooperativa' %></h1>
+                    <p class="page-description">
+                        <%= (user.role === 'cooperativa-admin' || user.role === 'superuser') ? 'Administre las comisiones de trabajo de la cooperativa y asigne miembros a cada una' : 'Consulte las comisiones de trabajo de la cooperativa y sus miembros asignados' %>
+                    </p>
+                </div>
+                
+                <!-- Commission Statistics -->
+                <div class="commission-statistics">
+                    <div class="stat-card">
+                        <i class="material-icons">groups</i>
+                        <div class="stat-info">
+                            <span class="stat-value"><%= commissions.length %></span>
+                            <span class="stat-label">Total Comisiones</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="material-icons">person</i>
+                        <div class="stat-info">
+                            <span class="stat-value"><%= commissions.reduce((total, c) => total + c.members.length, 0) %></span>
+                            <span class="stat-label">Total Asignaciones</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="material-icons">construction</i>
+                        <div class="stat-info">
+                            <span class="stat-value"><%= commissions.filter(c => c.stage === 'obra').length %></span>
+                            <span class="stat-label">En Obra</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="material-icons">home</i>
+                        <div class="stat-info">
+                            <span class="stat-value"><%= commissions.filter(c => c.stage === 'permanentes').length %></span>
+                            <span class="stat-label">Permanentes</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                <!-- Create New Commission -->
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h2>
+                            <i class="material-icons">add_circle</i>
+                            Crear Nueva Comisión
+                        </h2>
+                    </div>
+                    <form action="/admin/commissions" method="POST" class="create-commission-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="commission-name">Nombre de la comisión</label>
+                                <input type="text" id="commission-name" name="name" placeholder="Ej: Comisión de Obras" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="commission-stage">Etapa</label>
+                                <select id="commission-stage" name="stage" required>
+                                    <option value="">Seleccione una etapa</option>
+                                    <option value="obra">Durante la obra</option>
+                                    <option value="permanentes">Permanente</option>
+                                    <option value="convivencia">En convivencia</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="commission-description">Descripción (opcional)</label>
+                            <textarea id="commission-description" name="description" placeholder="Describe las responsabilidades y objetivos de esta comisión..." rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="material-icons">add</i>
+                            Crear Comisión
+                        </button>
+                    </form>
+                </div>
+                <% } %>
+                
+                <!-- Commissions Management -->
+                <div class="admin-section">
+                    <div class="section-header">
+                        <h2>
+                            <i class="material-icons">manage_accounts</i>
+                            Comisiones Existentes
+                        </h2>
+                    </div>
+                    
+                    <% if (commissions.length === 0) { %>
+                        <div class="empty-state">
+                            <i class="material-icons">group_work</i>
+                            <h3>No hay comisiones creadas</h3>
+                            <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                                <p>Comience creando su primera comisión usando el formulario de arriba</p>
+                            <% } else { %>
+                                <p>No hay comisiones disponibles en este momento</p>
+                            <% } %>
+                        </div>
+                    <% } else { %>
+                        <div class="commissions-list">
+                            <% commissions.forEach(commission => { %>
+                                <div class="commission-card">
+                                    <div class="commission-header">
+                                        <h3><%= commission.name %></h3>
+                                        <span class="stage-badge <%= commission.stage %>">
+                                            <%= commission.stage === 'obra' ? 'En Obra' : 
+                                                commission.stage === 'permanentes' ? 'Permanente' : 
+                                                'En Convivencia' %>
+                                        </span>
+                                    </div>
+                                    <% if (commission.description) { %>
+                                        <p class="commission-description"><%= commission.description %></p>
+                                    <% } %>
+                                    <div class="commission-members">
+                                        <h4>Miembros (<%= commission.members.length %>)</h4>
+                                        <% if (commission.members.length > 0) { %>
+                                            <ul class="members-list">
+                                                <% commission.members.forEach(member => { %>
+                                                    <li>
+                                                        <span class="member-name">
+                                                            <%= member.userId?.firstName %> <%= member.userId?.lastName %>
+                                                        </span>
+                                                        <span class="member-role <%= member.role %>">
+                                                            <%= member.role === 'titular' ? 'Titular' : 'Suplente' %>
+                                                        </span>
+                                                        <% if (member.detail) { %>
+                                                            <span class="member-detail">(<%= member.detail %>)</span>
+                                                        <% } %>
+                                                        <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                                                            <button class="btn-remove-member" data-commission="<%= commission._id %>" data-member="<%= member._id %>">
+                                                                <i class="material-icons">close</i>
+                                                            </button>
+                                                        <% } %>
+                                                    </li>
+                                                <% }); %>
+                                            </ul>
+                                        <% } else { %>
+                                            <p class="no-members">No hay miembros asignados</p>
+                                        <% } %>
+                                    </div>
+                                    
+                                    <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                                        <div class="commission-actions">
+                                            <form action="/admin/commissions/<%= commission._id %>/members" method="POST" class="add-member-form">
+                                                <select name="userId" required>
+                                                    <option value="">Seleccionar miembro...</option>
+                                                    <% users.forEach(u => { %>
+                                                        <option value="<%= u._id %>"><%= u.firstName %> <%= u.lastName %></option>
+                                                    <% }); %>
+                                                </select>
+                                                <select name="role" required>
+                                                    <option value="titular">Titular</option>
+                                                    <option value="suplente">Suplente</option>
+                                                </select>
+                                                <input type="text" name="detail" placeholder="Cargo (opcional)">
+                                                <button type="submit" class="btn btn-small">Agregar</button>
+                                            </form>
+                                            <button class="btn btn-danger btn-delete-commission" data-id="<%= commission._id %>">
+                                                <i class="material-icons">delete</i>
+                                                Eliminar Comisión
+                                            </button>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    // Delete commission
+    document.querySelectorAll('.btn-delete-commission').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('¿Está seguro de eliminar esta comisión?')) return;
+            const id = this.dataset.id;
+            try {
+                const res = await fetch(`/admin/commissions/${id}`, { method: 'DELETE' });
+                if (res.ok) location.reload();
+            } catch (err) {
+                console.error(err);
+                alert('Error al eliminar comisión');
+            }
+        });
+    });
+
+    // Remove member
+    document.querySelectorAll('.btn-remove-member').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('¿Eliminar este miembro de la comisión?')) return;
+            const commissionId = this.dataset.commission;
+            const memberId = this.dataset.member;
+            try {
+                const res = await fetch(`/admin/commissions/${commissionId}/members/${memberId}`, { method: 'DELETE' });
+                if (res.ok) location.reload();
+            } catch (err) {
+                console.error(err);
+                alert('Error al eliminar miembro');
+            }
+        });
+    });
+    </script>
+</body>
+</html>

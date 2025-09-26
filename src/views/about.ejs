@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body class="modular-view about-modular <%= darkMode ? 'dark-mode' : '' %>">
+    <div class="about-page">
+        <div class="about-container">
+            <!-- Hero Section -->
+            <div class="about-hero">
+                <h1 class="about-title">Coopnet</h1>
+                <p class="about-subtitle">Plataforma integral para la gestión de cooperativas de vivienda</p>
+            </div>
+
+            <!-- Features Section -->
+            <div class="about-section">
+                <h2>¿Qué es Coopnet?</h2>
+                <p class="section-description">
+                    Coopnet es una plataforma web diseñada específicamente para simplificar la gestión de cooperativas de vivienda en Uruguay. 
+                    Nuestro objetivo es digitalizar y optimizar los procesos administrativos, financieros y organizacionales de las cooperativas.
+                </p>
+            </div>
+
+            <!-- Technology Section -->
+            <div class="about-section">
+                <h2>Tecnología</h2>
+                <p class="section-description">
+                    Desarrollado con tecnologías modernas y confiables para garantizar seguridad, escalabilidad y facilidad de uso.
+                </p>
+                
+                <div class="tech-stack">
+                    <div class="tech-item">
+                        <div class="tech-icon">
+                            <i class="material-icons">code</i>
+                        </div>
+                        <span>Node.js & Express</span>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-icon">
+                            <i class="material-icons">storage</i>
+                        </div>
+                        <span>MongoDB</span>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-icon">
+                            <i class="material-icons">web</i>
+                        </div>
+                        <span>HTML5 & CSS3</span>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-icon">
+                            <i class="material-icons">security</i>
+                        </div>
+                        <span>Auth0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Section -->
+            <div class="about-section">
+                <h2>Desarrollador</h2>
+                <div class="team-grid">
+                    <div class="team-card">
+                        <div class="team-avatar">
+                            <i class="material-icons">person</i>
+                        </div>
+                        <h3><%= config.personName %></h3>
+                        <p class="team-role">Desarrollador Full Stack</p>
+                        <div class="team-links">
+                            <% if (config.personLinkedin) { %>
+                            <a href="<%= config.personLinkedin %>" target="_blank" rel="noopener noreferrer" class="team-link">
+                                <i class="material-icons">business</i>
+                                LinkedIn
+                            </a>
+                            <% } %>
+                            <% if (config.personGithub) { %>
+                            <a href="<%= config.personGithub %>" target="_blank" rel="noopener noreferrer" class="team-link">
+                                <i class="material-icons">code</i>
+                                GitHub
+                            </a>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Section -->
+            <div class="about-section">
+                <h2><a href="https://dokta.cc" target="_blank">DOKTA</a></h2>
+                <p class="section-description">
+                    MiCope.org es desarrollado por <a href="https://dokta.cc" target="_blank">DOKTA</a>, Distributed Open Knowledge & Technological Advancements.
+                </p>
+                <div class="company-links">
+                    <% if (config.doktaLinkedin) { %>
+                    <a href="<%= config.doktaLinkedin %>" target="_blank" rel="noopener noreferrer" class="company-link">
+                        <i class="material-icons">business</i>
+                        LinkedIn DOKTA
+                    </a>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Version and Contact -->
+            <div class="about-footer">
+                <div class="version-info">
+                    <span class="version-label">Versión:</span>
+                    <span class="version-number"><%= version %></span>
+                </div>
+                <div class="contact-info">
+                    <p>¿Tienes preguntas o sugerencias?</p>
+                    <a href="mailto:info.micope@protonmail.com" class="contact-link">
+                        <i class="material-icons">mail</i>
+                        Contáctanos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

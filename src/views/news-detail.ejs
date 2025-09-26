@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= news.title %> - <%= cooperativaName %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="csrf-token" content="">
+</head>
+<body class="modular-view <%= darkMode ? 'dark-mode' : '' %>">
+    <div class="modular-header">
+        <a href="/news?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn-back">
+            <i class="material-icons">arrow_back</i> Volver a Novedades
+        </a>
+    </div>
+
+    <div class="news-detail-container">
+        <article class="news-article">
+            <header class="article-header">
+                <% if (news.priority !== 'normal') { %>
+                    <span class="priority priority-<%= news.priority %>">
+                        <%= news.priority === 'urgent' ? 'Urgente' :
+                            news.priority === 'high' ? 'Alta' : 'Baja' %>
+                    </span>
+                <% } %>
+                <h1><%= news.title %></h1>
+                <div class="article-meta">
+                    <div class="meta-group">
+                        <span class="author">
+                            <i class="material-icons">person</i>
+                            <% if (news.author && news.author.firstName && news.author.lastName) { %>
+                                <%= news.author.firstName %> <%= news.author.lastName %>
+                            <% } else if (news.createdBy === 'superadmin') { %>
+                                MiCope.org Admin
+                            <% } else { %>
+                                Autor no disponible
+                            <% } %>
+                        </span>
+                        <span class="date">
+                            <i class="material-icons">schedule</i>
+                            <%= new Date(news.publishedAt || news.createdAt).toLocaleDateString('es-ES', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }) %>
+                        </span>
+                    </div>
+                    <div class="article-stats">
+                        <span class="stat">
+                            <i class="material-icons">visibility</i>
+                            <%= news.views || 0 %> vistas
+                        </span>
+                        <button id="likeBtn" class="like-btn <%= hasLiked ? 'liked' : '' %>" onclick="toggleLike('<%= news._id %>')">
+                            <i class="material-icons"><%= hasLiked ? 'favorite' : 'favorite_border' %></i>
+                            <span id="likeCount"><%= news.likeCount %></span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <% if (news.featuredImage) { %>
+                <div class="featured-image">
+                    <img src="<%= news.featuredImage %>" alt="<%= news.title %>">
+                </div>
+            <% } %>
+
+            <div class="article-content">
+                <%- news.content %>
+            </div>
+
+            <% if (news.tags && news.tags.length > 0) { %>
+                <footer class="article-footer">
+                    <div class="tags-section">
+                        <h3>Etiquetas</h3>
+                        <div class="tags-list">
+                            <% news.tags.forEach(function(tag) { %>
+                                <span class="tag">#<%= tag %></span>
+                            <% }) %>
+                        </div>
+                    </div>
+                </footer>
+            <% } %>
+        </article>
+
+        <div class="actions-bar">
+            <a href="/news?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-secondary">
+                <i class="material-icons">arrow_back</i> Volver a Novedades
+            </a>
+        </div>
+    </div>
+
+    <script>
+        async function toggleLike(newsId) {
+            const btn = document.getElementById('likeBtn');
+            const icon = btn.querySelector('.material-icons');
+            const countSpan = document.getElementById('likeCount');
+            
+            try {
+                const queryParams = new URLSearchParams(window.location.search);
+                const response = await fetch(`/news/${newsId}/like?${queryParams}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.liked) {
+                        btn.classList.add('liked');
+                        icon.textContent = 'favorite';
+                    } else {
+                        btn.classList.remove('liked');
+                        icon.textContent = 'favorite_border';
+                    }
+                    countSpan.textContent = result.likeCount;
+                }
+            } catch (error) {
+                console.error('Error toggling like:', error);
+            }
+        }
+    </script>
+
+    <style>
+        .modular-view {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .modular-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            color: #764ba2;
+            transform: translateX(-5px);
+        }
+
+        .news-detail-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .news-article {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .article-header {
+            padding: 2.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .article-header h1 {
+            margin: 1rem 0;
+            font-size: 2.25rem;
+            line-height: 1.3;
+            color: #1a202c;
+        }
+
+        .priority {
+            display: inline-block;
+            padding: 0.375rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .priority-urgent {
+            background: linear-gradient(45deg, #dc2626, #ef4444);
+            color: white;
+        }
+
+        .priority-high {
+            background: linear-gradient(45deg, #ea580c, #f97316);
+            color: white;
+        }
+
+        .priority-low {
+            background: linear-gradient(45deg, #64748b, #94a3b8);
+            color: white;
+        }
+
+        .article-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .meta-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .meta-group span {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .meta-group .material-icons {
+            font-size: 1.125rem;
+            color: #94a3b8;
+        }
+
+        .article-stats {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .stat .material-icons {
+            font-size: 1.25rem;
+            color: #9ca3af;
+        }
+
+        .like-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 2px solid #e5e7eb;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #6b7280;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .like-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+            transform: scale(1.05);
+        }
+
+        .like-btn.liked {
+            background: linear-gradient(45deg, #ef4444, #f87171);
+            border-color: transparent;
+            color: white;
+        }
+
+        .like-btn .material-icons {
+            font-size: 1.25rem;
+        }
+
+        .featured-image {
+            width: 100%;
+            max-height: 400px;
+            overflow: hidden;
+        }
+
+        .featured-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .article-content {
+            padding: 2.5rem;
+            font-size: 1.125rem;
+            line-height: 1.8;
+            color: #374151;
+        }
+
+        .article-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        .article-content h2 {
+            margin: 2rem 0 1rem 0;
+            font-size: 1.75rem;
+            color: #1a202c;
+        }
+
+        .article-content h3 {
+            margin: 1.5rem 0 0.75rem 0;
+            font-size: 1.375rem;
+            color: #2d3748;
+        }
+
+        .article-content ul,
+        .article-content ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        .article-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .article-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: #4b5563;
+        }
+
+        .article-footer {
+            padding: 2rem 2.5rem;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .tags-section h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.125rem;
+            color: #4b5563;
+        }
+
+        .tags-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .tag {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 0.375rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .actions-bar {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Dark mode styles */
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        .dark-mode .modular-header {
+            background: rgba(45, 55, 72, 0.95);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .btn-back {
+            color: #a0aec0;
+        }
+
+        .dark-mode .btn-back:hover {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .news-article {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .article-header {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .article-header h1 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .meta-group {
+            color: #a0aec0;
+        }
+
+        .dark-mode .stat {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .like-btn {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #cbd5e0;
+        }
+
+        .dark-mode .like-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .dark-mode .article-content {
+            color: #e2e8f0;
+        }
+
+        .dark-mode .article-content h2 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .article-content h3 {
+            color: #e2e8f0;
+        }
+
+        .dark-mode .article-content blockquote {
+            color: #cbd5e0;
+            border-left-color: #805ad5;
+        }
+
+        .dark-mode .article-footer {
+            background: rgba(26, 32, 44, 0.5);
+            border-top-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .tags-section h3 {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .tag {
+            background: rgba(102, 126, 234, 0.2);
+            color: #a5b4fc;
+        }
+
+        @media (max-width: 768px) {
+            .news-detail-container {
+                padding: 0 1rem;
+                margin: 1rem auto;
+            }
+
+            .article-header {
+                padding: 1.5rem;
+            }
+
+            .article-header h1 {
+                font-size: 1.75rem;
+            }
+
+            .article-meta {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .article-content {
+                padding: 1.5rem;
+                font-size: 1rem;
+            }
+
+            .article-footer {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</body>
+</html>

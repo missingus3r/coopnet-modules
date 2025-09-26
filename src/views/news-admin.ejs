@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Novedades - <%= cooperativaName %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="csrf-token" content="">
+</head>
+<body class="modular-view <%= darkMode ? 'dark-mode' : '' %>">
+    <div class="modular-header">
+        <div class="header-left">
+            <a href="/news?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn-back">
+                <i class="material-icons">arrow_back</i> Volver
+            </a>
+            <h1><i class="material-icons">settings</i> Gestión de Novedades</h1>
+        </div>
+        <a href="/news/edit/new?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-primary">
+            <i class="material-icons">add</i> Nueva Novedad
+        </a>
+    </div>
+
+    <div class="admin-container">
+        <% if (news && news.length > 0) { %>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Autor</th>
+                            <th>Fecha</th>
+                            <th>Estadísticas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% news.forEach(function(article) { %>
+                            <tr>
+                                <td class="title-cell">
+                                    <strong><%= article.title %></strong>
+                                    <% if (article.tags && article.tags.length > 0) { %>
+                                        <div class="tags-mini">
+                                            <% article.tags.slice(0, 3).forEach(function(tag) { %>
+                                                <span class="tag-mini">#<%= tag %></span>
+                                            <% }) %>
+                                        </div>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <span class="status status-<%= article.status %>">
+                                        <%= article.status === 'published' ? 'Publicado' : 
+                                            article.status === 'draft' ? 'Borrador' : 'Archivado' %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="priority priority-<%= article.priority %>">
+                                        <%= article.priority === 'urgent' ? 'Urgente' :
+                                            article.priority === 'high' ? 'Alta' :
+                                            article.priority === 'normal' ? 'Normal' : 'Baja' %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <% if (article.author) { %>
+                                        <%= article.author.firstName %> <%= article.author.lastName %>
+                                    <% } else { %>
+                                        -
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <%= new Date(article.createdAt).toLocaleDateString('es-ES') %>
+                                </td>
+                                <td class="stats-cell">
+                                    <span class="stat-item">
+                                        <i class="material-icons">visibility</i> <%= article.views || 0 %>
+                                    </span>
+                                    <span class="stat-item">
+                                        <i class="material-icons">favorite</i> <%= article.likeCount %>
+                                    </span>
+                                </td>
+                                <td class="actions-cell">
+                                    <% if (article.status === 'published') { %>
+                                        <a href="/news/<%= article._id %>?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn-action btn-view" title="Ver">
+                                            <i class="material-icons">visibility</i>
+                                        </a>
+                                    <% } %>
+                                    <a href="/news/edit/<%= article._id %>?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn-action btn-edit" title="Editar">
+                                        <i class="material-icons">edit</i>
+                                    </a>
+                                    <button onclick="deleteNews('<%= article._id %>')" class="btn-action btn-delete" title="Eliminar">
+                                        <i class="material-icons">delete</i>
+                                    </button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <% if (totalPages > 1) { %>
+                <div class="pagination">
+                    <% if (hasPrevPage) { %>
+                        <a href="/news/admin?page=<%= prevPage %>&<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-secondary">
+                            <i class="material-icons">chevron_left</i> Anterior
+                        </a>
+                    <% } %>
+                    
+                    <span class="page-info">
+                        Página <%= currentPage %> de <%= totalPages %>
+                    </span>
+                    
+                    <% if (hasNextPage) { %>
+                        <a href="/news/admin?page=<%= nextPage %>&<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-secondary">
+                            Siguiente <i class="material-icons">chevron_right</i>
+                        </a>
+                    <% } %>
+                </div>
+            <% } %>
+        <% } else { %>
+            <div class="empty-state">
+                <i class="material-icons">article</i>
+                <h3>No hay novedades</h3>
+                <p>Aún no has creado ninguna novedad.</p>
+                <a href="/news/edit/new?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-primary">
+                    <i class="material-icons">add</i> Crear Primera Novedad
+                </a>
+            </div>
+        <% } %>
+    </div>
+
+    <script>
+        async function deleteNews(newsId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta novedad? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                const queryParams = new URLSearchParams(window.location.search);
+                const response = await fetch(`/news/${newsId}?${queryParams}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Novedad eliminada exitosamente');
+                    location.reload();
+                } else {
+                    alert('Error al eliminar la novedad: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la novedad');
+            }
+        }
+    </script>
+
+    <style>
+        .modular-view {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .modular-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .modular-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modular-header h1 .material-icons {
+            font-size: 2rem;
+            color: #667eea;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+        }
+
+        .btn-back:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateX(-2px);
+        }
+
+        .admin-container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .table-responsive {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table thead {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .admin-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-table tbody tr {
+            border-bottom: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .admin-table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .admin-table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .title-cell {
+            max-width: 300px;
+        }
+
+        .title-cell strong {
+            display: block;
+            margin-bottom: 0.25rem;
+            color: #2d3748;
+        }
+
+        .tags-mini {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag-mini {
+            font-size: 0.7rem;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 0.125rem 0.375rem;
+            border-radius: 10px;
+        }
+
+        .status {
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-published {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+        }
+
+        .status-draft {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+            color: white;
+        }
+
+        .status-archived {
+            background: linear-gradient(45deg, #6b7280, #9ca3af);
+            color: white;
+        }
+
+        .priority {
+            padding: 0.25rem 0.625rem;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .priority-urgent {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .priority-high {
+            background: #fed7aa;
+            color: #ea580c;
+        }
+
+        .priority-normal {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .priority-low {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .stats-cell {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .stat-item .material-icons {
+            font-size: 1rem;
+            color: #9ca3af;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-action {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-action .material-icons {
+            font-size: 1.125rem;
+        }
+
+        .btn-view {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .btn-view:hover {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .btn-edit {
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+        }
+
+        .btn-edit:hover {
+            background: #a855f7;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .btn-delete:hover {
+            background: #ef4444;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state .material-icons {
+            font-size: 5rem;
+            color: #cbd5e0;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2d3748;
+            font-size: 1.5rem;
+        }
+
+        .empty-state p {
+            color: #64748b;
+            margin: 0 0 2rem 0;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .page-info {
+            color: white;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        /* Dark mode styles */
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        .dark-mode .modular-header {
+            background: rgba(45, 55, 72, 0.95);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .modular-header h1 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .table-responsive {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .admin-table tbody tr {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .admin-table tbody tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .dark-mode .title-cell strong {
+            color: #f7fafc;
+        }
+
+        .dark-mode .stat-item {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .empty-state {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .empty-state h3 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .empty-state p {
+            color: #a0aec0;
+        }
+
+        @media (max-width: 768px) {
+            .modular-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .header-left {
+                flex-direction: column;
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+            }
+
+            .admin-table {
+                min-width: 700px;
+            }
+
+            .pagination {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</body>
+</html>

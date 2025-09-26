@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= isEdit ? 'Editar' : 'Nueva' %> Novedad - <%= cooperativaName %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="csrf-token" content="">
+</head>
+<body class="modular-view <%= darkMode ? 'dark-mode' : '' %>">
+    <div class="modular-header">
+        <div class="header-left">
+            <a href="/news/admin?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn-back">
+                <i class="material-icons">arrow_back</i> Volver
+            </a>
+            <h1>
+                <i class="material-icons"><%= isEdit ? 'edit' : 'add_circle' %></i>
+                <%= isEdit ? 'Editar Novedad' : 'Nueva Novedad' %>
+            </h1>
+        </div>
+    </div>
+
+    <div class="edit-container">
+        <form id="newsForm" class="news-form">
+            <div class="form-card">
+                <div class="form-group">
+                    <label for="title">
+                        <i class="material-icons">title</i>
+                        Título <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="title" 
+                        name="title" 
+                        value="<%= news ? news.title : '' %>"
+                        maxlength="200"
+                        required
+                        placeholder="Título de la novedad"
+                    >
+                    <small class="form-help">Máximo 200 caracteres</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="status">
+                            <i class="material-icons">publish</i>
+                            Estado
+                        </label>
+                        <select id="status" name="status">
+                            <option value="draft" <%= news && news.status === 'draft' ? 'selected' : '' %>>Borrador</option>
+                            <option value="published" <%= news && news.status === 'published' ? 'selected' : '' %>>Publicado</option>
+                            <option value="archived" <%= news && news.status === 'archived' ? 'selected' : '' %>>Archivado</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="priority">
+                            <i class="material-icons">flag</i>
+                            Prioridad
+                        </label>
+                        <select id="priority" name="priority">
+                            <option value="low" <%= news && news.priority === 'low' ? 'selected' : '' %>>Baja</option>
+                            <option value="normal" <%= news && news.priority === 'normal' ? 'selected' : '' %>>Normal</option>
+                            <option value="high" <%= news && news.priority === 'high' ? 'selected' : '' %>>Alta</option>
+                            <option value="urgent" <%= news && news.priority === 'urgent' ? 'selected' : '' %>>Urgente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="excerpt">
+                        <i class="material-icons">short_text</i>
+                        Resumen
+                    </label>
+                    <textarea 
+                        id="excerpt" 
+                        name="excerpt"
+                        rows="3"
+                        maxlength="300"
+                        placeholder="Breve resumen de la novedad (opcional)"
+                    ><%= news ? news.excerpt : '' %></textarea>
+                    <small class="form-help">Si no se proporciona, se generará automáticamente. Máximo 300 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="content">
+                        <i class="material-icons">description</i>
+                        Contenido <span class="required">*</span>
+                    </label>
+                    <div class="editor-toolbar">
+                        <button type="button" onclick="formatText('bold')" title="Negrita">
+                            <i class="material-icons">format_bold</i>
+                        </button>
+                        <button type="button" onclick="formatText('italic')" title="Cursiva">
+                            <i class="material-icons">format_italic</i>
+                        </button>
+                        <button type="button" onclick="formatText('underline')" title="Subrayado">
+                            <i class="material-icons">format_underlined</i>
+                        </button>
+                        <button type="button" onclick="insertHeading(2)" title="Título">
+                            <i class="material-icons">title</i>
+                        </button>
+                        <button type="button" onclick="insertList('ul')" title="Lista">
+                            <i class="material-icons">format_list_bulleted</i>
+                        </button>
+                        <button type="button" onclick="insertList('ol')" title="Lista numerada">
+                            <i class="material-icons">format_list_numbered</i>
+                        </button>
+                    </div>
+                    <div 
+                        id="content" 
+                        contenteditable="true"
+                        class="content-editor"
+                        placeholder="Escribe el contenido de la novedad aquí..."
+                    ><%= news ? news.content : '' %></div>
+                    <input type="hidden" name="content" id="contentInput">
+                </div>
+
+                <div class="form-group">
+                    <label for="tags">
+                        <i class="material-icons">label</i>
+                        Etiquetas
+                    </label>
+                    <input 
+                        type="text" 
+                        id="tags" 
+                        name="tags"
+                        value="<%= news && news.tags ? news.tags.join(', ') : '' %>"
+                        placeholder="Etiquetas separadas por comas (ej: importante, urgente, reunión)"
+                    >
+                    <small class="form-help">Separa las etiquetas con comas</small>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/news/admin?<%= Object.entries(locals).filter(([k,v]) => ['cooperativaId','cooperativaName','userName','userId','isAdmin','darkMode','token'].includes(k)).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&') %>" class="btn btn-secondary">
+                        <i class="material-icons">close</i> Cancelar
+                    </a>
+                    <button type="button" onclick="saveNews('draft')" class="btn btn-draft">
+                        <i class="material-icons">save</i> Guardar como Borrador
+                    </button>
+                    <button type="button" onclick="saveNews('publish')" class="btn btn-primary">
+                        <i class="material-icons">publish</i> Publicar
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Editor functions
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            document.getElementById('content').focus();
+        }
+
+        function insertHeading(level) {
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            const heading = document.createElement(`h${level}`);
+            heading.textContent = selection.toString() || 'Título';
+            range.deleteContents();
+            range.insertNode(heading);
+            selection.removeAllRanges();
+        }
+
+        function insertList(type) {
+            const list = type === 'ul' ? 
+                document.createElement('ul') : 
+                document.createElement('ol');
+            const li = document.createElement('li');
+            li.textContent = 'Elemento de lista';
+            list.appendChild(li);
+            
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(list);
+            selection.removeAllRanges();
+        }
+
+        // Save news function
+        async function saveNews(action) {
+            const form = document.getElementById('newsForm');
+            const contentEditor = document.getElementById('content');
+            const contentInput = document.getElementById('contentInput');
+            
+            // Get content from editor
+            contentInput.value = contentEditor.innerHTML;
+            
+            // Validate required fields
+            const title = form.title.value.trim();
+            const content = contentInput.value.trim();
+            
+            if (!title) {
+                alert('El título es obligatorio');
+                return;
+            }
+            
+            if (!content || content === '<br>') {
+                alert('El contenido es obligatorio');
+                return;
+            }
+            
+            // Prepare data
+            const formData = {
+                title: title,
+                content: content,
+                excerpt: form.excerpt.value.trim(),
+                status: action === 'publish' ? 'published' : form.status.value,
+                priority: form.priority.value,
+                tags: form.tags.value,
+                action: action
+            };
+            
+            try {
+                const queryParams = new URLSearchParams(window.location.search);
+                const newsId = '<%= news ? news._id : "new" %>';
+                const url = `/news/${newsId}?${queryParams}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    // Redirect to admin list
+                    window.location.href = `/news/admin?${queryParams}`;
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al guardar la novedad');
+            }
+        }
+
+        // Initialize content editor
+        document.addEventListener('DOMContentLoaded', function() {
+            const contentEditor = document.getElementById('content');
+            
+            // Handle placeholder
+            contentEditor.addEventListener('focus', function() {
+                if (this.innerHTML === '') {
+                    this.innerHTML = '<br>';
+                }
+            });
+            
+            contentEditor.addEventListener('blur', function() {
+                if (this.innerHTML === '<br>') {
+                    this.innerHTML = '';
+                }
+            });
+        });
+    </script>
+
+    <style>
+        .modular-view {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .modular-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .modular-header h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modular-header h1 .material-icons {
+            font-size: 2rem;
+            color: #667eea;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+        }
+
+        .btn-back:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateX(-2px);
+        }
+
+        .edit-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .news-form {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-card {
+            padding: 2.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .form-group label .material-icons {
+            font-size: 1.25rem;
+            color: #9ca3af;
+        }
+
+        .required {
+            color: #ef4444;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-help {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .editor-toolbar {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .editor-toolbar button {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .editor-toolbar button:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .editor-toolbar button .material-icons {
+            font-size: 1.25rem;
+        }
+
+        .content-editor {
+            min-height: 300px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-top: 1px solid #e5e7eb;
+            border-radius: 0 0 8px 8px;
+            background: white;
+            line-height: 1.6;
+            overflow-y: auto;
+        }
+
+        .content-editor:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .content-editor[placeholder]:empty:before {
+            content: attr(placeholder);
+            color: #9ca3af;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-draft {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+            color: white;
+        }
+
+        .btn-draft:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+            transform: translateY(-2px);
+        }
+
+        /* Dark mode styles */
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        .dark-mode .modular-header {
+            background: rgba(45, 55, 72, 0.95);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .modular-header h1 {
+            color: #f7fafc;
+        }
+
+        .dark-mode .news-form {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .form-group label {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .form-group input,
+        .dark-mode .form-group select,
+        .dark-mode .form-group textarea,
+        .dark-mode .content-editor {
+            background: rgba(26, 32, 44, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+        }
+
+        .dark-mode .editor-toolbar {
+            background: rgba(26, 32, 44, 0.7);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark-mode .editor-toolbar button {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .editor-toolbar button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f7fafc;
+        }
+
+        .dark-mode .form-actions {
+            border-top-color: rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .edit-container {
+                padding: 0 1rem;
+                margin: 1rem auto;
+            }
+
+            .form-card {
+                padding: 1.5rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</body>
+</html>

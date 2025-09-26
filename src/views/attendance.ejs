@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistencia - <%= cooperativaName %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="csrf-token" content="">
+</head>
+<body class="modular-view <%= darkMode ? 'dark-mode' : '' %>">
+    <div class="modular-header">
+        <h1><i class="material-icons">how_to_reg</i> Asistencia - <%= cooperativaName %></h1>
+    </div>
+
+    <div class="attendance-container">
+        <% if (isAdmin) { %>
+            <!-- Admin View -->
+            <div class="admin-attendance-header">
+                <div class="stats-summary">
+                    <div class="summary-card">
+                        <i class="material-icons">group</i>
+                        <div class="summary-info">
+                            <span class="summary-value"><%= members ? members.length : 0 %></span>
+                            <span class="summary-label">Total Socios</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="material-icons">schedule</i>
+                        <div class="summary-info">
+                            <span class="summary-value"><%= todayTotalHours || 0 %>h</span>
+                            <span class="summary-label">Horas Hoy</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button id="btn-add-entry" class="btn-primary">
+                        <i class="material-icons">add_circle</i>
+                        Agregar Registro
+                    </button>
+                </div>
+            </div>
+
+            <!-- Attendance History Table -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Socio</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                            <th>Duración</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (entries && entries.length > 0) { %>
+                            <% entries.forEach(entry => { %>
+                                <% 
+                                    let duration = '-';
+                                    if (entry.entryTime && entry.exitTime) {
+                                        const diff = new Date(entry.exitTime) - new Date(entry.entryTime);
+                                        const hours = Math.floor(diff / (1000 * 60 * 60));
+                                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                        duration = `${hours}h ${minutes}m`;
+                                    }
+                                %>
+                                <tr>
+                                    <td>
+                                        <div class="member-cell">
+                                            <div class="member-avatar-small">
+                                                <%= entry.userId.firstName.charAt(0) %><%= entry.userId.lastName.charAt(0) %>
+                                            </div>
+                                            <%= entry.userId.firstName %> <%= entry.userId.lastName %>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="timestamp-cell">
+                                            <span class="date"><%= new Date(entry.entryTime).toLocaleDateString('es-UY') %></span>
+                                            <span class="time"><%= new Date(entry.entryTime).toLocaleTimeString('es-UY', {hour: '2-digit', minute:'2-digit'}) %></span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <% if (entry.exitTime) { %>
+                                            <div class="timestamp-cell">
+                                                <span class="date"><%= new Date(entry.exitTime).toLocaleDateString('es-UY') %></span>
+                                                <span class="time"><%= new Date(entry.exitTime).toLocaleTimeString('es-UY', {hour: '2-digit', minute:'2-digit'}) %></span>
+                                            </div>
+                                        <% } else { %>
+                                            <span class="pending-exit">En curso</span>
+                                        <% } %>
+                                    </td>
+                                    <td><span class="duration-badge"><%= duration %></span></td>
+                                    <td><%= entry.observations || '-' %></td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="no-data" style="text-align: center; padding: 2rem; color: #666;">
+                                    <i class="material-icons" style="font-size: 3rem; color: #ccc; display: block; margin-bottom: 1rem;">event_busy</i>
+                                    No hay registros de asistencia
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Manual Entry Modal -->
+            <div id="entryModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Agregar Registro Manual</h3>
+                        <button class="close-modal"><i class="material-icons">close</i></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="entryForm">
+                            <div class="form-group">
+                                <label for="userId">Socio *</label>
+                                <select id="userId" name="userId" required>
+                                    <option value="">Seleccione un socio</option>
+                                    <% if (members) { %>
+                                        <% members.forEach(member => { %>
+                                            <option value="<%= member._id %>"><%= member.firstName %> <%= member.lastName %></option>
+                                        <% }) %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="markType">Tipo de marca *</label>
+                                <select id="markType" name="markType" required>
+                                    <option value="checkin">Entrada</option>
+                                    <option value="checkout">Salida</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="markTime">Fecha y hora *</label>
+                                <input type="datetime-local" id="markTime" name="markTime" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="observations">Observaciones</label>
+                                <textarea id="observations" name="observations" placeholder="Información adicional"></textarea>
+                            </div>
+                            
+                            <div class="modal-actions">
+                                <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                                <button type="submit" class="btn-primary">Registrar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        <% } else { %>
+            <!-- User View -->
+            <div class="attendance-status-card">
+                <div class="status-icon <%= nextType && nextType.toLowerCase() %>">
+                    <i class="material-icons"><%= nextType === 'IN' ? 'login' : 'logout' %></i>
+                </div>
+                <div class="status-info">
+                    <h2>Control General</h2>
+                    <p class="status-text"><%= nextType === 'IN' ? 'Fuera del trabajo' : 'En el trabajo' %></p>
+                    <% if (history && history.length > 0 && history[0].type === 'IN') { %>
+                        <p class="last-action">Entrada: <%= new Date(history[0].timestamp).toLocaleString('es-UY') %></p>
+                    <% } %>
+                </div>
+                <button id="btn-punch" class="btn-punch-modern <%= nextType && nextType.toLowerCase() %>">
+                    <i class="material-icons"><%= nextType === 'IN' ? 'login' : 'logout' %></i>
+                    <span id="punch-label"><%= nextType === 'IN' ? 'Marcar Entrada' : 'Marcar Salida' %></span>
+                    <span id="spinner" class="punch-spinner" style="display:none;">
+                        <i class="material-icons spin">autorenew</i>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Current Activities -->
+            <% if (currentActivities && currentActivities.length > 0) { %>
+                <div class="activity-attendance-section">
+                    <h2>Actividades Actuales</h2>
+                    <div class="activities-grid">
+                        <% currentActivities.forEach(activity => { %>
+                            <div class="activity-card" data-activity-id="<%= activity._id %>">
+                                <div class="activity-header">
+                                    <h3><%= activity.title %></h3>
+                                    <span class="activity-time">
+                                        <%= new Date(activity.startDate).toLocaleTimeString('es-UY', {hour: '2-digit', minute:'2-digit'}) %> - 
+                                        <%= new Date(activity.endDate).toLocaleTimeString('es-UY', {hour: '2-digit', minute:'2-digit'}) %>
+                                    </span>
+                                </div>
+                                
+                                <% if (activity.description) { %>
+                                    <p class="activity-description"><%= activity.description %></p>
+                                <% } %>
+                                
+                                <div class="activity-attendance-actions">
+                                    <% if (activity.requiresCheckIn) { %>
+                                        <button class="btn-activity-checkin" data-activity-id="<%= activity._id %>" data-type="checkin">
+                                            <i class="material-icons">login</i>
+                                            Marcar Entrada
+                                        </button>
+                                    <% } %>
+                                    
+                                    <% if (activity.requiresCheckOut) { %>
+                                        <button class="btn-activity-checkout" data-activity-id="<%= activity._id %>" data-type="checkout">
+                                            <i class="material-icons">logout</i>
+                                            Marcar Salida
+                                        </button>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- History Table -->
+            <div class="history-container">
+                <h2>Historial de Marcaciones</h2>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Fecha y Hora</th>
+                                <th>Estado</th>
+                                <th>Ubicación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (history && history.length > 0) { %>
+                                <% history.forEach(item => { %>
+                                    <tr class="<%= item.valid ? '' : 'invalid-entry' %>">
+                                        <td>
+                                            <span class="type-badge <%= item.type.toLowerCase() %>">
+                                                <i class="material-icons"><%= item.type === 'IN' ? 'login' : 'logout' %></i>
+                                                <%= item.type === 'IN' ? 'Entrada' : 'Salida' %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="timestamp-cell">
+                                                <span class="date"><%= new Date(item.timestamp).toLocaleDateString('es-UY') %></span>
+                                                <span class="time"><%= new Date(item.timestamp).toLocaleTimeString('es-UY', {hour: '2-digit', minute:'2-digit'}) %></span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="validity-badge <%= item.valid ? 'valid' : 'invalid' %>">
+                                                <i class="material-icons"><%= item.valid ? 'check_circle' : 'cancel' %></i>
+                                                <%= item.valid ? 'Válido' : 'Inválido' %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <% if (item.lat && item.lng) { %>
+                                                <i class="material-icons location-icon">location_on</i>
+                                            <% } else { %>
+                                                <span class="no-location">-</span>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="4" class="no-data" style="text-align: center; padding: 2rem; color: #666;">
+                                        <i class="material-icons" style="font-size: 3rem; color: #ccc; display: block; margin-bottom: 1rem;">history</i>
+                                        No hay marcaciones registradas
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <script>
+        const isAdmin = <%= isAdmin ? 'true' : 'false' %>;
+        const geofence = <%- JSON.stringify(geofence || {}) %>;
+        const query = <%- JSON.stringify(query) %>;
+
+        if (isAdmin) {
+            // Admin functionality
+            const modal = document.getElementById('entryModal');
+            const openBtn = document.getElementById('btn-add-entry');
+            const closeBtns = document.querySelectorAll('.close-modal');
+            
+            openBtn.addEventListener('click', () => {
+                modal.style.display = 'block';
+                document.body.classList.add('modal-open');
+            });
+            
+            closeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                });
+            });
+            
+            // Form submission
+            document.getElementById('entryForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                
+                try {
+                    const response = await fetch('/asistencia/entries' + window.location.search, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Error al registrar entrada: ' + error.message);
+                }
+            });
+            
+        } else {
+            // User functionality
+            const btn = document.getElementById('btn-punch');
+            const spinner = document.getElementById('spinner');
+            
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (!navigator.geolocation) {
+                        alert('Geolocalización no soportada');
+                        return;
+                    }
+                    
+                    btn.disabled = true;
+                    spinner.style.display = 'inline-block';
+                    
+                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        
+                        // Check geofence if exists
+                        if (geofence.lat && geofence.lng) {
+                            const dist = calculateDistance(lat, lng, geofence.lat, geofence.lng);
+                            if (dist > geofence.radius) {
+                                alert(`Estás fuera de la zona permitida (${Math.round(dist)} m)`);
+                                btn.disabled = false;
+                                spinner.style.display = 'none';
+                                return;
+                            }
+                        }
+                        
+                        try {
+                            const response = await fetch('/asistencia/punch' + window.location.search, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ lat, lng })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                                window.location.reload();
+                            } else {
+                                alert('Error: ' + result.error);
+                                btn.disabled = false;
+                                spinner.style.display = 'none';
+                            }
+                        } catch (error) {
+                            alert('Error en la petición: ' + error.message);
+                            btn.disabled = false;
+                            spinner.style.display = 'none';
+                        }
+                    }, (error) => {
+                        alert('No se obtuvo la ubicación');
+                        btn.disabled = false;
+                        spinner.style.display = 'none';
+                    });
+                });
+            }
+            
+            // Activity attendance
+            document.querySelectorAll('.btn-activity-checkin, .btn-activity-checkout').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const activityId = this.getAttribute('data-activity-id');
+                    const type = this.getAttribute('data-type');
+                    
+                    if (!navigator.geolocation) {
+                        alert('Geolocalización no soportada');
+                        return;
+                    }
+                    
+                    this.disabled = true;
+                    const originalContent = this.innerHTML;
+                    this.innerHTML = '<i class="material-icons spin">refresh</i> Obteniendo ubicación...';
+                    
+                    navigator.geolocation.getCurrentPosition(async (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        try {
+                            const response = await fetch('/asistencia/activity' + window.location.search, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ activityId, type, lat, lng })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                                this.innerHTML = '<i class="material-icons">check</i> Registrado';
+                                this.style.backgroundColor = '#4CAF50';
+                                setTimeout(() => window.location.reload(), 1500);
+                            } else {
+                                alert('Error: ' + result.error);
+                                this.disabled = false;
+                                this.innerHTML = originalContent;
+                            }
+                        } catch (error) {
+                            alert('Error: ' + error.message);
+                            this.disabled = false;
+                            this.innerHTML = originalContent;
+                        }
+                    }, (error) => {
+                        alert('No se obtuvo la ubicación');
+                        this.disabled = false;
+                        this.innerHTML = originalContent;
+                    });
+                });
+            });
+        }
+        
+        // Haversine distance calculation
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371000; // Earth radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+    </script>
+</body>
+</html>
