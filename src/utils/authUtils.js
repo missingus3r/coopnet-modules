@@ -48,12 +48,12 @@ function isAdmin(req) {
   if (req.query.isAdmin === 'true') {
     return true;
   }
-  
+
   // Fallback to session
   if (req.session && req.session.user) {
-    return req.session.user.role === 'cooperativa-admin' || req.session.user.role === 'superuser';
+    return req.session.user.isAdmin === true;
   }
-  
+
   return false;
 }
 
@@ -65,7 +65,7 @@ function buildModularUser(req) {
     firstName: req.query.userName ? req.query.userName.split(' ')[0] : 'Usuario',
     lastName: req.query.userName ? req.query.userName.split(' ').slice(1).join(' ') : '',
     cooperativaId: getCooperativaId(req),
-    role: isAdmin(req) ? 'cooperativa-admin' : 'user',
+    isAdmin: isAdmin(req),
     status: 'active'
   };
 }

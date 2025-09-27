@@ -12,7 +12,7 @@
         <div class="page-header">
             <h1 class="page-title">Votaciones</h1>
             <p class="page-description">Participa en las decisiones importantes de la cooperativa</p>
-            <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+            <% if (user.isAdmin === true) { %>
             <button id="create-vote-btn" class="btn btn-primary">Crear Votación</button>
             <% } %>
         </div>
@@ -105,7 +105,7 @@
     </div>
 
     <!-- Modal para crear votación -->
-    <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+    <% if (user.isAdmin === true) { %>
     <div id="createVoteModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
@@ -143,5 +143,447 @@
     <% } %>
 
     <script src="/js/votaciones.js"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .page-title {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            color: #2d3748;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-description {
+            margin: 0 0 1.5rem 0;
+            color: #64748b;
+            font-size: 1.125rem;
+        }
+
+        .votaciones-container {
+            display: grid;
+            gap: 2rem;
+        }
+
+        section h2 {
+            color: white;
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .active-votes, .past-votes {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .vote-item {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .vote-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .vote-item.past {
+            opacity: 0.85;
+        }
+
+        .vote-timer {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .vote-item h3 {
+            margin: 0 0 1rem 0;
+            color: #2d3748;
+            font-size: 1.5rem;
+            padding-right: 6rem;
+        }
+
+        .vote-item p {
+            color: #64748b;
+            margin: 0 0 1.5rem 0;
+            line-height: 1.6;
+        }
+
+        .vote-options {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .vote-options label {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .vote-options label:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.02);
+        }
+
+        .vote-options input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .vote-options input[type="radio"]:checked + label,
+        .vote-options label:has(input[type="radio"]:checked) {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .vote-represent {
+            margin-bottom: 1.5rem;
+        }
+
+        .vote-represent label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .vote-represent select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .vote-represent select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .submit-vote-btn {
+            margin-bottom: 1.5rem;
+        }
+
+        .vote-counts {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge.si {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        .badge.no {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .badge.abst {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        .vote-results {
+            margin-top: 1.5rem;
+        }
+
+        .vote-results h4 {
+            margin: 0 0 1rem 0;
+            color: #2d3748;
+            font-size: 1.125rem;
+        }
+
+        .result-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .result-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .result-bar span {
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .result-bar .bar {
+            height: 30px;
+            border-radius: 8px;
+            transition: all 0.5s ease;
+            min-width: 30px;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            margin: 2rem auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .close-modal {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 1.5rem;
+            width: 36px;
+            height: 36px;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal form {
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+            }
+
+            .page-title {
+                font-size: 1.75rem;
+            }
+
+            .vote-item h3 {
+                font-size: 1.25rem;
+                padding-right: 0;
+                margin-bottom: 3rem;
+            }
+
+            .vote-timer {
+                top: auto;
+                bottom: 1.5rem;
+                right: 1.5rem;
+            }
+
+            .vote-options {
+                flex-direction: column;
+            }
+
+            .vote-options label {
+                min-width: auto;
+            }
+
+            .modal-content {
+                margin: 1rem;
+                width: calc(100% - 2rem);
+            }
+        }
+    </style>
 </body>
 </html>

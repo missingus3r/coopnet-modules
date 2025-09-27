@@ -13,7 +13,7 @@ exports.getVotaciones = async (req, res) => {
     const userId = getUserId(req) || req.session?.user?._id;
     const userName = req.query.userName || req.session?.user?.firstName || 'Usuario';
     const cooperativaName = req.query.cooperativaName || 'Cooperativa';
-    const userIsAdmin = isAdmin(req) || req.session?.user?.role === 'cooperativa-admin';
+    const userIsAdmin = isAdmin(req) || req.session?.user?.isAdmin === true;
     
     if (!cooperativaId) return res.redirect('/');
     

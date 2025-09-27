@@ -12,9 +12,9 @@
         <section class="admin-commissions-page">
             <div class="commissions-container">
                 <div class="page-header">
-                    <h1 class="page-title"><%= (user.role === 'cooperativa-admin' || user.role === 'superuser') ? 'Gestión de Comisiones' : 'Comisiones de la Cooperativa' %></h1>
+                    <h1 class="page-title"><%= user.isAdmin === true ? 'Gestión de Comisiones' : 'Comisiones de la Cooperativa' %></h1>
                     <p class="page-description">
-                        <%= (user.role === 'cooperativa-admin' || user.role === 'superuser') ? 'Administre las comisiones de trabajo de la cooperativa y asigne miembros a cada una' : 'Consulte las comisiones de trabajo de la cooperativa y sus miembros asignados' %>
+                        <%= user.isAdmin === true ? 'Administre las comisiones de trabajo de la cooperativa y asigne miembros a cada una' : 'Consulte las comisiones de trabajo de la cooperativa y sus miembros asignados' %>
                     </p>
                 </div>
                 
@@ -50,7 +50,7 @@
                     </div>
                 </div>
                 
-                <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                <% if (user.isAdmin === true) { %>
                 <!-- Create New Commission -->
                 <div class="admin-section">
                     <div class="section-header">
@@ -59,7 +59,7 @@
                             Crear Nueva Comisión
                         </h2>
                     </div>
-                    <form action="/admin/commissions" method="POST" class="create-commission-form">
+                    <form id="create-commission-form" class="create-commission-form">
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="commission-name">Nombre de la comisión</label>
@@ -100,7 +100,7 @@
                         <div class="empty-state">
                             <i class="material-icons">group_work</i>
                             <h3>No hay comisiones creadas</h3>
-                            <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                            <% if (user.isAdmin === true) { %>
                                 <p>Comience creando su primera comisión usando el formulario de arriba</p>
                             <% } else { %>
                                 <p>No hay comisiones disponibles en este momento</p>
@@ -136,7 +136,7 @@
                                                         <% if (member.detail) { %>
                                                             <span class="member-detail">(<%= member.detail %>)</span>
                                                         <% } %>
-                                                        <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                                                        <% if (user.isAdmin === true) { %>
                                                             <button class="btn-remove-member" data-commission="<%= commission._id %>" data-member="<%= member._id %>">
                                                                 <i class="material-icons">close</i>
                                                             </button>
@@ -149,9 +149,9 @@
                                         <% } %>
                                     </div>
                                     
-                                    <% if (user.role === 'cooperativa-admin' || user.role === 'superuser') { %>
+                                    <% if (user.isAdmin === true) { %>
                                         <div class="commission-actions">
-                                            <form action="/admin/commissions/<%= commission._id %>/members" method="POST" class="add-member-form">
+                                            <form class="add-member-form" data-commission-id="<%= commission._id %>">
                                                 <select name="userId" required>
                                                     <option value="">Seleccionar miembro...</option>
                                                     <% users.forEach(u => { %>
@@ -181,14 +181,83 @@
     </div>
 
     <script>
+    const queryParams = window.location.search;
+
+    // Create commission form
+    const createForm = document.getElementById('create-commission-form');
+    if (createForm) {
+        createForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const res = await fetch(`/admin/commissions${queryParams}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const error = await res.json();
+                    alert('Error: ' + (error.message || 'No se pudo crear la comisión'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error al crear comisión');
+            }
+        });
+    }
+
+    // Add member forms
+    document.querySelectorAll('.add-member-form').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const commissionId = this.dataset.commissionId;
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const res = await fetch(`/admin/commissions/${commissionId}/members${queryParams}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const error = await res.json();
+                    alert('Error: ' + (error.message || 'No se pudo agregar el miembro'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error al agregar miembro');
+            }
+        });
+    });
+
     // Delete commission
     document.querySelectorAll('.btn-delete-commission').forEach(btn => {
         btn.addEventListener('click', async function() {
             if (!confirm('¿Está seguro de eliminar esta comisión?')) return;
             const id = this.dataset.id;
             try {
-                const res = await fetch(`/admin/commissions/${id}`, { method: 'DELETE' });
-                if (res.ok) location.reload();
+                const res = await fetch(`/admin/commissions/${id}${queryParams}`, { method: 'DELETE' });
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const error = await res.json();
+                    alert('Error: ' + (error.message || 'No se pudo eliminar la comisión'));
+                }
             } catch (err) {
                 console.error(err);
                 alert('Error al eliminar comisión');
@@ -203,8 +272,15 @@
             const commissionId = this.dataset.commission;
             const memberId = this.dataset.member;
             try {
-                const res = await fetch(`/admin/commissions/${commissionId}/members/${memberId}`, { method: 'DELETE' });
-                if (res.ok) location.reload();
+                const res = await fetch(`/admin/commissions/${commissionId}/members/${memberId}${queryParams}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const error = await res.json();
+                    alert('Error: ' + (error.message || 'No se pudo eliminar el miembro'));
+                }
             } catch (err) {
                 console.error(err);
                 alert('Error al eliminar miembro');
@@ -212,5 +288,428 @@
         });
     });
     </script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .commissions-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .page-title {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            color: #2d3748;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-description {
+            margin: 0;
+            color: #64748b;
+            font-size: 1.125rem;
+        }
+
+        .commission-statistics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card .material-icons {
+            font-size: 3rem;
+            color: #667eea;
+        }
+
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .admin-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header h2 {
+            margin: 0 0 1.5rem 0;
+            color: #2d3748;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header .material-icons {
+            color: #667eea;
+        }
+
+        .create-commission-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .commissions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .commission-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .commission-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .commission-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .commission-header h3 {
+            margin: 0;
+            color: #2d3748;
+            font-size: 1.5rem;
+        }
+
+        .stage-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .stage-badge.obra {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        .stage-badge.permanentes {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        .stage-badge.convivencia {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .commission-description {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .commission-members h4 {
+            margin: 0 0 1rem 0;
+            color: #4b5563;
+            font-size: 1.125rem;
+        }
+
+        .members-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .members-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .member-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .member-role {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .member-role.titular {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .member-role.suplente {
+            background: rgba(100, 116, 139, 0.1);
+            color: #64748b;
+        }
+
+        .member-detail {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .btn-remove-member {
+            margin-left: auto;
+            padding: 0.25rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #ef4444;
+        }
+
+        .btn-remove-member:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-remove-member .material-icons {
+            font-size: 1rem;
+        }
+
+        .no-members {
+            color: #9ca3af;
+            font-style: italic;
+            margin-bottom: 1.5rem;
+        }
+
+        .commission-actions {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .add-member-form {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .add-member-form select,
+        .add-member-form input {
+            padding: 0.5rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .add-member-form select:focus,
+        .add-member-form input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #64748b;
+        }
+
+        .empty-state .material-icons {
+            font-size: 5rem;
+            color: #cbd5e0;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 0.5rem 0;
+            color: #4b5563;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+            }
+
+            .page-title {
+                font-size: 1.75rem;
+            }
+
+            .commission-statistics {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .commission-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .add-member-form {
+                flex-direction: column;
+            }
+
+            .add-member-form select,
+            .add-member-form input {
+                min-width: auto;
+            }
+        }
+    </style>
 </body>
 </html>

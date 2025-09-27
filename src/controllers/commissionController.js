@@ -12,7 +12,7 @@ exports.listCommissions = async (req, res) => {
     const userId = getUserId(req) || req.session?.user?._id;
     const userName = req.query.userName || req.session?.user?.firstName || 'Usuario';
     const cooperativaName = req.query.cooperativaName || 'Cooperativa';
-    const userIsAdmin = isAdmin(req) || req.session?.user?.role === 'cooperativa-admin';
+    const userIsAdmin = isAdmin(req) || req.session?.user?.isAdmin === true;
     
     if (!cooperativaId) return res.redirect('/');
     
@@ -56,18 +56,29 @@ exports.listCommissions = async (req, res) => {
 exports.deleteCommission = async (req, res) => {
   try {
     // Check if user has admin privileges
-    if (req.session.user.role !== 'cooperativa-admin' && req.session.user.role !== 'superuser') {
-      req.flash('error_msg', 'No tienes permisos para eliminar comisiones');
+    const user = req.user || req.session?.user;
+    if (!user || user.isAdmin !== true) {
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(403).json({ success: false, message: 'No tienes permisos para eliminar comisiones' });
+      }
+      if (req.flash) req.flash('error_msg', 'No tienes permisos para eliminar comisiones');
       return res.redirect('/commissions');
     }
-    
+
     const { id } = req.params;
     await Commission.findByIdAndDelete(id);
-    req.flash('success_msg', 'Comisión eliminada exitosamente');
+
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.json({ success: true, message: 'Comisión eliminada exitosamente' });
+    }
+    if (req.flash) req.flash('success_msg', 'Comisión eliminada exitosamente');
     res.redirect('/admin/commissions');
   } catch (error) {
     console.error('Error deleting commission:', error);
-    req.flash('error_msg', 'Error al eliminar la comisión');
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.status(500).json({ success: false, message: 'Error al eliminar la comisión' });
+    }
+    if (req.flash) req.flash('error_msg', 'Error al eliminar la comisión');
     res.redirect('/admin/commissions');
   }
 };
@@ -80,7 +91,7 @@ exports.getAdminCommissions = async (req, res) => {
     const userId = getUserId(req) || req.session?.user?._id;
     const userName = req.query.userName || req.session?.user?.firstName || 'Usuario';
     const cooperativaName = req.query.cooperativaName || 'Cooperativa';
-    const userIsAdmin = isAdmin(req) || req.session?.user?.role === 'cooperativa-admin';
+    const userIsAdmin = isAdmin(req) || req.session?.user?.isAdmin === true;
     
     if (!cooperativaId) return res.redirect('/');
     
@@ -134,50 +145,68 @@ exports.getAdminCommissions = async (req, res) => {
 exports.createCommission = async (req, res) => {
   try {
     // Check if user has admin privileges
-    if (req.session.user.role !== 'cooperativa-admin' && req.session.user.role !== 'superuser') {
-      req.flash('error_msg', 'No tienes permisos para crear comisiones');
+    const user = req.user || req.session?.user;
+    if (!user || user.isAdmin !== true) {
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(403).json({ success: false, message: 'No tienes permisos para crear comisiones' });
+      }
+      if (req.flash) req.flash('error_msg', 'No tienes permisos para crear comisiones');
       return res.redirect('/commissions');
     }
-    
-    const cooperativaId = getCooperativaId(req) || req.session?.user?.cooperativaId;
+
+    const cooperativaId = getCooperativaId(req) || user?.cooperativaId;
     const { name, description, stage } = req.body;
-    
+
     // Check if a commission with the same name already exists
     let existingCommission = null;
     if (validateObjectId(cooperativaId)) {
-      existingCommission = await Commission.findOne({ 
-        name: name.trim(), 
+      existingCommission = await Commission.findOne({
+        name: name.trim(),
         cooperativaId: new mongoose.Types.ObjectId(cooperativaId),
-        isDeleted: false 
+        isDeleted: false
       });
     }
-    
+
     if (existingCommission) {
-      req.flash('error_msg', 'Ya existe una comisión con ese nombre');
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(400).json({ success: false, message: 'Ya existe una comisión con ese nombre' });
+      }
+      if (req.flash) req.flash('error_msg', 'Ya existe una comisión con ese nombre');
       return res.redirect('/admin/commissions');
     }
-    
+
     if (validateObjectId(cooperativaId)) {
-      await Commission.create({ 
-        name: name.trim(), 
-        description: description ? description.trim() : '', 
-        stage, 
-        cooperativaId: new mongoose.Types.ObjectId(cooperativaId), 
-        members: [] 
+      await Commission.create({
+        name: name.trim(),
+        description: description ? description.trim() : '',
+        stage,
+        cooperativaId: new mongoose.Types.ObjectId(cooperativaId),
+        members: []
       });
     } else {
       throw new Error('ID de cooperativa inválido');
     }
-    req.flash('success_msg', 'Comisión creada exitosamente');
+
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.json({ success: true, message: 'Comisión creada exitosamente' });
+    }
+    if (req.flash) req.flash('success_msg', 'Comisión creada exitosamente');
     res.redirect('/admin/commissions');
   } catch (error) {
     console.error('Error creating commission:', error);
-    
+
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      const message = (error.code === 11000 || error.name === 'MongoServerError')
+        ? 'Ya existe una comisión con ese nombre'
+        : 'Error al crear la comisión';
+      return res.status(500).json({ success: false, message });
+    }
+
     // Handle MongoDB duplicate key error
     if (error.code === 11000 || error.name === 'MongoServerError') {
-      req.flash('error_msg', 'Ya existe una comisión con ese nombre');
+      if (req.flash) req.flash('error_msg', 'Ya existe una comisión con ese nombre');
     } else {
-      req.flash('error_msg', 'Error al crear la comisión');
+      if (req.flash) req.flash('error_msg', 'Error al crear la comisión');
     }
     res.redirect('/admin/commissions');
   }
@@ -187,22 +216,40 @@ exports.createCommission = async (req, res) => {
 exports.addMember = async (req, res) => {
   try {
     // Check if user has admin privileges
-    if (req.session.user.role !== 'cooperativa-admin' && req.session.user.role !== 'superuser') {
-      req.flash('error_msg', 'No tienes permisos para agregar miembros a comisiones');
+    const user = req.user || req.session?.user;
+    if (!user || user.isAdmin !== true) {
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(403).json({ success: false, message: 'No tienes permisos para agregar miembros a comisiones' });
+      }
+      if (req.flash) req.flash('error_msg', 'No tienes permisos para agregar miembros a comisiones');
       return res.redirect('/commissions');
     }
-    
+
     const { id } = req.params;
     const { userId, role, detail } = req.body;
     const commission = await Commission.findById(id);
-    if (!commission) return res.redirect('/admin/commissions');
+
+    if (!commission) {
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(404).json({ success: false, message: 'Comisión no encontrada' });
+      }
+      return res.redirect('/admin/commissions');
+    }
+
     commission.members.push({ userId, role, detail: detail || '' });
     await commission.save();
-    req.flash('success_msg', 'Miembro agregado');
+
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.json({ success: true, message: 'Miembro agregado' });
+    }
+    if (req.flash) req.flash('success_msg', 'Miembro agregado');
     res.redirect('/admin/commissions');
   } catch (error) {
     console.error('Error adding member:', error);
-    req.flash('error_msg', 'Error al agregar miembro');
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.status(500).json({ success: false, message: 'Error al agregar miembro' });
+    }
+    if (req.flash) req.flash('error_msg', 'Error al agregar miembro');
     res.redirect('/admin/commissions');
   }
 };
@@ -211,23 +258,41 @@ exports.addMember = async (req, res) => {
 exports.removeMember = async (req, res) => {
   try {
     // Check if user has admin privileges
-    if (req.session.user.role !== 'cooperativa-admin' && req.session.user.role !== 'superuser') {
-      req.flash('error_msg', 'No tienes permisos para eliminar miembros de comisiones');
+    const user = req.user || req.session?.user;
+    if (!user || user.isAdmin !== true) {
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(403).json({ success: false, message: 'No tienes permisos para eliminar miembros de comisiones' });
+      }
+      if (req.flash) req.flash('error_msg', 'No tienes permisos para eliminar miembros de comisiones');
       return res.redirect('/commissions');
     }
-    
+
     const { id, memberId } = req.params;
     const commission = await Commission.findById(id);
-    if (!commission) return res.redirect('/admin/commissions');
+
+    if (!commission) {
+      if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(404).json({ success: false, message: 'Comisión no encontrada' });
+      }
+      return res.redirect('/admin/commissions');
+    }
+
     // Remove member by id
     // commission.members.pull(memberId) removes subdoc with matching _id
     commission.members.pull(memberId);
     await commission.save();
-    req.flash('success_msg', 'Miembro eliminado');
+
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.json({ success: true, message: 'Miembro eliminado' });
+    }
+    if (req.flash) req.flash('success_msg', 'Miembro eliminado');
     res.redirect('/admin/commissions');
   } catch (error) {
     console.error('Error removing member:', error);
-    req.flash('error_msg', 'Error al eliminar miembro');
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.status(500).json({ success: false, message: 'Error al eliminar miembro' });
+    }
+    if (req.flash) req.flash('error_msg', 'Error al eliminar miembro');
     res.redirect('/admin/commissions');
   }
 };
@@ -236,7 +301,7 @@ exports.removeMember = async (req, res) => {
 exports.updateMember = async (req, res) => {
   try {
     // Check if user has admin privileges
-    if (req.session.user.role !== 'cooperativa-admin' && req.session.user.role !== 'superuser') {
+    if (req.session.user.isAdmin !== true) {
       req.flash('error_msg', 'No tienes permisos para actualizar miembros de comisiones');
       return res.redirect('/commissions');
     }
@@ -264,7 +329,7 @@ exports.updateMember = async (req, res) => {
 exports.updateCommission = async (req, res) => {
   try {
     // Check if user has admin privileges
-    if (req.session.user.role !== 'cooperativa-admin' && req.session.user.role !== 'superuser') {
+    if (req.session.user.isAdmin !== true) {
       req.flash('error_msg', 'No tienes permisos para actualizar comisiones');
       return res.redirect('/commissions');
     }

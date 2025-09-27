@@ -112,5 +112,327 @@
             </div>
         </div>
     </div>
+
+    <style>
+        .modular-view {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .about-page {
+            padding: 3rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .about-container {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .about-hero {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 4rem 3rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .about-title {
+            margin: 0 0 1rem 0;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .about-subtitle {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #64748b;
+        }
+
+        .about-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .about-section h2 {
+            margin: 0 0 1.5rem 0;
+            font-size: 2rem;
+            color: #2d3748;
+        }
+
+        .section-description {
+            margin: 0 0 2rem 0;
+            font-size: 1.125rem;
+            line-height: 1.8;
+            color: #4b5563;
+        }
+
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tech-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-3px);
+        }
+
+        .tech-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tech-icon .material-icons {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .tech-item span {
+            font-weight: 600;
+            color: #2d3748;
+            text-align: center;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .team-card {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .team-card:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-3px);
+        }
+
+        .team-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .team-avatar .material-icons {
+            font-size: 3rem;
+            color: white;
+        }
+
+        .team-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: #2d3748;
+            font-size: 1.25rem;
+        }
+
+        .team-role {
+            margin: 0 0 1.5rem 0;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .team-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .team-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .team-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .team-link .material-icons {
+            font-size: 1rem;
+        }
+
+        .about-footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .version-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .version-label {
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        .version-number {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .contact-info {
+            text-align: right;
+        }
+
+        .contact-info p {
+            margin: 0 0 0.75rem 0;
+            color: #64748b;
+        }
+
+        .contact-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .contact-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Dark mode */
+        .dark-mode {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        .dark-mode .about-hero,
+        .dark-mode .about-section,
+        .dark-mode .about-footer {
+            background: rgba(45, 55, 72, 0.95);
+        }
+
+        .dark-mode .about-subtitle,
+        .dark-mode .section-description,
+        .dark-mode .team-role,
+        .dark-mode .contact-info p {
+            color: #cbd5e0;
+        }
+
+        .dark-mode .about-section h2,
+        .dark-mode .tech-item span,
+        .dark-mode .team-card h3,
+        .dark-mode .version-label {
+            color: #f7fafc;
+        }
+
+        .dark-mode .tech-item,
+        .dark-mode .team-card {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .dark-mode .tech-item:hover,
+        .dark-mode .team-card:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .about-page {
+                padding: 2rem 1rem;
+            }
+
+            .about-hero {
+                padding: 2.5rem 1.5rem;
+            }
+
+            .about-title {
+                font-size: 2.5rem;
+            }
+
+            .about-subtitle {
+                font-size: 1.125rem;
+            }
+
+            .about-section {
+                padding: 1.5rem;
+            }
+
+            .tech-stack {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+
+            .team-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .about-footer {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .contact-info {
+                text-align: center;
+            }
+        }
+    </style>
 </body>
 </html>
